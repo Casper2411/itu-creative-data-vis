@@ -58,6 +58,21 @@ var dataObjects = [
 	}
 ]
 
+function compareObjects(array) {
+	let seen = []
+
+	array.forEach(element1 => {
+		seen.forEach(element2 => {
+			if(element1.name == element2.name){
+				seen.push({
+					
+				})
+			}
+		})
+	});
+
+}
+
 var rectWidth = 20;
 var margin = rectWidth*2;
 var xScale = d3.scaleLinear()
@@ -77,6 +92,9 @@ var rects = canvas.selectAll("rect")
 	})
 	.attr("fill","white");
 	
+
+
+
 
 
 
