@@ -12,6 +12,8 @@ var margin = r*4;
 // 			.attr("height",h)
 // 			.style("background-color","black")
 
+//test
+
 			//  Exercise
 //Re-write your code from Friday using `d3.scale` to space out the shapes that you drew in your assignment.
 var w = 1000;
