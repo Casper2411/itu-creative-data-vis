@@ -90,7 +90,7 @@ function makeRainLines(g, startX, startY, previousAngle, num, Data){
 
 	// Convert angle from degrees to radians
     var angleRad = (Data.data[num]+previousAngle) * Math.PI / 180;
-	var length = num*20;
+	var length = num*(h/20);
 
     // Calculate endpoint coordinates
     var endX = startX + length * Math.cos(angleRad);
@@ -104,13 +104,31 @@ function makeRainLines(g, startX, startY, previousAngle, num, Data){
 		.attr("stroke", function(){
 			return colorScale(Data.name);
 		})
-        .attr("stroke-width", 4);
-	makeRainLines(g, endX,endY,(Data.data[num]+previousAngle),num+1, Data);
+        .attr("stroke-width", 2);
+
+	if(num+1 != Data.data.length){
+		//Dotted line
+		g.append("line")
+			.attr("x1", endX)
+			.attr("y1", endY)
+			.attr("x2", endX + (length/3) * Math.cos(angleRad))
+			.attr("y2", endY + (length/3) * Math.sin(angleRad))
+			.attr("stroke", function(){
+				return colorScale(Data.name);
+			})
+			.attr("stroke-width", 1)
+			.attr("stroke-dasharray", "3, 3");
+		
+		g.append("text")
+			.attr()
+	}
+
+	makeRainLines(g, endX,endY,(Data.data[num]+previousAngle), num+1, Data);
 }
 
 rainDrops.forEach(function(d, i) {
     var g = svg.append("g")
-               .attr("transform", `translate(${w / 2},${h / 3})`);
+               .attr("transform", `translate(${w / 2},${h / 6})`);
 	// Add event listeners to the group
     g.on("mouseover", function() {
         // Fade out all groups except the hovered one
