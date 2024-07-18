@@ -63,23 +63,6 @@ var colorScale = d3.scaleOrdinal()
 					.domain(rainDrops.map(d => d.name))
 					.range(d3.schemeCategory10);
 
-// var xScale = d3.scaleLinear()
-// 				.domain([min, max])
-// 				.range([margin, w-margin]);
-/*
-var rotateScale = d3.scaleLinear()
-				.domain([min, max])
-				.range([0, 360])
-*/
-/*
-var xScale = d3.scaleLinear()
-		.domain([0, arrData.length])
-		.range([margin, w-margin]);
-*/
-
-//create a separate "g" element for each piece of data
-//draw a rectangle inside each "g" element as opposed to just in the canvas as usual
-
 //define a recursive function for making the lines
 function makeRainLines(g, startX, startY, previousAngle, num, Data){
 	console.log(Data.data.length)
@@ -119,8 +102,28 @@ function makeRainLines(g, startX, startY, previousAngle, num, Data){
 			.attr("stroke-width", 1)
 			.attr("stroke-dasharray", "3, 3");
 		
+		var arc = d3.arc()
+			.innerRadius(length/4-1)   // The inner radius of the arc. Setting it to 0 creates a pie slice.
+			.outerRadius(length/4) // The outer radius of the arc.
+			.startAngle((Data.data[num]+previousAngle +90) * Math.PI / 180)    // The starting angle of the arc in radians.
+			.endAngle((Data.data[num+1]+Data.data[num]+previousAngle+90) * Math.PI / 180); // The ending angle of the arc in radians. This creates a quarter circle.
+		
+		g.append("path")
+			.attr("d", arc)
+			.attr("fill", function(){
+				return colorScale(Data.name);
+			})
+			.attr("transform", `translate(${endX},${endY})`); // Move the arc to a specific position
 		g.append("text")
-			.attr()
+			.attr("x", endX)
+			.attr("y", endY)
+			.text(`${Data.data[num]}💧`) //°
+			.style("fill", "white")
+			.style("font-size", "12px")
+			.style("fill", "yellow")
+			.style("text-shadow", "6px 6px 12px rgba(0, 0, 0, 1)") // Add shadow for better visibility
+			.style("display", "none") // Hide the text initially
+			.attr("class", "hover-text"); // Add a class to this text element
 	}
 
 	makeRainLines(g, endX,endY,(Data.data[num]+previousAngle), num+1, Data);
@@ -134,14 +137,27 @@ rainDrops.forEach(function(d, i) {
         // Fade out all groups except the hovered one
         svg.selectAll("g")
            .style("opacity", function() {
-               return (this === g.node()) ? 1 : 0.2; // Keep hovered group fully visible
+               return (this === g.node()) ? 1 : 0.4; // Keep hovered group fully visible
            });
+		g.selectAll(".hover-text")
+           .style("display", "block"); // Show text on hover
     })
     .on("mouseout", function() {
         // Restore full opacity to all groups on mouseout
         svg.selectAll("g")
            .style("opacity", 1);
+		g.selectAll(".hover-text")
+           .style("display", "none"); // Hide text on mouseout
     });
 
     makeRainLines(g, 50, 50, Math.PI / 4, 0, d);
-});
+
+	g.append("text")
+		.attr("x", w/3)
+		.attr("y", h-100 - (i*25))
+		.text(`${d.name}`)
+		.style("fill", function(){
+			return colorScale(d.name);
+		})
+		.style("font-size", "20px")
+}).then();
