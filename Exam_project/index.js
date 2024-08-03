@@ -152,42 +152,12 @@ loadAllData().then(function(loadedData) {
 
 //Poistioning on y axis
 var yScale = d3.scaleLinear()
-  				.domain([-20,20])
-				.range(margin, h-margin);
+  				.domain([-20.0,20.0])
+				.range([margin, h-margin]);
 
-////////////////////////Poistioning on xScale///////////////////////////////
 
-//Helping function for finding if a year is a leap year.
-function isLeapYear(year){
+//Poistioning on xScale is done later
 
-    return ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)); //Returns a boolean value.
-};
-
-//get number of days in a given month of a given year
-function getDaysInMonth(year, monthIndex){
-    const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    return daysInMonth[monthIndex];
-};
-
-//Here the dayScale is created. 
-//A new one should be created for each month, due to the amount of days changing depending on leap years
-function createDayScale(year, month, width){
-	//Getting the month number:
-	const monthIndex = months.indexOf(month); 
-
-	//Finding the amount of days
-	const numberOfDays = getDaysInMonth(year, monthIndex);
-
-	//Hacky soulotion for creating an array with the amount of days:
-	const days = Array.from({length: numberOfDays}, (_, i) => i + 1); // Array [1, 2, ..., numDays]
-
-	// Create the scale
-    const dayScale = d3.scaleBand()
-        .domain(days) // Days of the month
-        .range([0, width]) // Width in pixels
-
-    return dayScale;
-}
 
 //Here the size of each month is approximately ((w-margin)-margin)/snowMonths.length
 var monthScale = d3.scaleBand()
@@ -199,33 +169,76 @@ var colorScale = d3.scaleOrdinal()
 				.range(d3.schemeCategory10);
 
 function makeSnowTempGraph(g, thisYear, yearData){
-	function drawOneMonth(month, monthData){
-		var scale = createDayScale(thisYear, month, ((w-margin)-margin)/snowMonths.length);
+	function drawOneMonth(month, monthData, nextTempPos, nextSnowPos){
 
 		// Convert the monthData object to an array of values
         const monthDataArray = Object.values(monthData);
 
-
-		function getRandomInt(min, max) {
-			return Math.floor(Math.random() * (max - min + 1)) + min;
+		function dayScale(index){
+			var retValue = margin + (index*((w-(margin*2))/snowMonths.length)/monthDataArray.length);
+			return retValue;
 		}
-		monthDataArray.forEach(element => {
-			g.append("line")
-				.attr("x1", 5*getRandomInt(5,30))
-				.attr("y1", 5*getRandomInt(5,30))
-				.attr("x2", 20*getRandomInt(5,20))
-				.attr("y2", 20*getRandomInt(5,20))
-				.attr("stroke", function(){
-					return colorScale(thisYear)
-				});
+
+		monthDataArray.forEach((element, index, array) => {
+			var nextElement = index < array.length - 1 ? array[index + 1] : null;
+			
+			//Check if end of month, and the line should connect
+			if(index === (array.length - 1)){
+				nextElement = nextTempPos;
+			}
+
+			if(nextElement !== null){
+
+				//Transparent line in background to make hover easier.
+				g.append("line")
+					.attr("x1", function(){
+						return monthScale(month) + dayScale(index);
+					})
+					.attr("y1", function(){
+						return yScale(element.laveste);
+					})
+					.attr("x2", function(){
+						return monthScale(month) + dayScale(index+1);
+					})
+					.attr("y2", function(){
+						return yScale(nextElement.laveste);
+					})
+					.attr("stroke", "transparent")
+					.attr("stroke-width", 8);
+				
+				//The line showing the lower temperature.
+				g.append("line")
+					.attr("x1", function(){
+						return monthScale(month) + dayScale(index);
+					})
+					.attr("y1", function(){
+						return yScale(element.laveste);
+					})
+					.attr("x2", function(){
+						return monthScale(month) + dayScale(index+1);
+					})
+					.attr("y2", function(){
+						return yScale(nextElement.laveste);
+					})
+					.attr("stroke", function(){
+						return colorScale(thisYear)
+					});
+			}
 		});
 	}
 
-	snowMonths.forEach(function(d){
+	//Here snowMonths is used for inputting the months into yearData.
+	snowMonths.forEach(function(d, i, arr){
 		var temporary = yearData[d];
 		if (temporary !== undefined && temporary !== null) {
-			console.log(`Data for ${d} is available.`);
-			drawOneMonth(d, temporary);
+
+			//check if there exist month after this.
+			var nextStartPoint = yearData[arr[i+1]]
+			if(nextStartPoint !== undefined && nextStartPoint !== null){
+				const nextMonthDataArray = Object.values(nextStartPoint);
+				drawOneMonth(d, temporary, nextMonthDataArray[0]);
+			}
+			drawOneMonth(d, temporary, null);
 		} else {
 			console.warn(`Warning: No data available for ${d} in year ${thisYear}.`);
 		}
@@ -252,7 +265,17 @@ function draw(Data){
 			svg.selectAll("g")
 			   .style("opacity", 0.5);
 		});
-	
+		svg.append("line")
+			.attr("x1", margin)
+			.attr("y1", function(){
+				return yScale(0);
+			})
+			.attr("x2", w-margin)
+			.attr("y2", function(){
+				return yScale(0);
+			})
+			.attr("stroke", "white");
+
 		makeSnowTempGraph(g, year, yearData)
 	})
 }
