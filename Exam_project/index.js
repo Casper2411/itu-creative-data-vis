@@ -1,6 +1,7 @@
-var w = 1000;
+var w = 1200;
 var h = 500;
 var baseLine = h/2;
+var margin = 20;
 
 
 var svg = d3.select("#canvas").append("svg")
@@ -10,8 +11,9 @@ var svg = d3.select("#canvas").append("svg")
 
 
 			
-const years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]; // List of years
+const years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]; // List of years
 const months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]; // List of months
+const snowMonths = ["october", "november", "december", "january", "february", "march", "april"]
 
 const data = {};
 
@@ -121,26 +123,24 @@ async function loadAllData() {
 // Load the data
 loadAllData();
 
-/*
-d3.json("SnowData.json").then(function (data) {
-    skyData = data;
-    draw();
-});
+//How to access a year:
+//data[2015]["january"][0].date.getFullYear()
 
-function draw(){
-     console.log("Test");
-	 console.log(skyData)
-}
-
-
-var min = d3.min(skyData);
-var max = d3.max(skyData);
-*/
-/*
+var xScale = d3.scaleLinear()
+  				.domain([-20,20])
+				.range(margin, h-margin);
+var dayScale = d3.scaleLinear()
+                .domain([0, 31])
+                .range([0, ((w-margin)-margin)/snowMonths.length]);
+var monthScale = d3.scaleLinear()
+					.domain(snowMonths)
+					.range([margin, w-margin]);
 
 var colorScale = d3.scaleOrdinal()
-					.domain(rainDrops.map(d => d.name))
-					.range(d3.schemeCategory10);
+				.domain(years)
+				.range(d3.schemeCategory10);
+
+/*
 
 //define a recursive function for making the lines
 function makeRainLines(g, startX, startY, previousAngle, num, Data){
