@@ -15,6 +15,7 @@ const years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021,
 const months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]; // List of months
 const snowMonths = ["october", "november", "december", "january", "february", "march", "april"]
 
+//Here all data will be stored:
 const data = {};
 
 const parseNumber = (str) => {
@@ -48,20 +49,16 @@ async function loadTempCSV(year, month) {
   }
   
   
-  
-  // Function to load and parse snow CSV data
   // Function to load and parse snow CSV data
 async function loadSnowCSV(year, month) {
 	const filename = `data/${year}_${month}_snow.csv`;
 	try {
 	  return await d3.dsv(';', filename, d => {
 		const date = new Date(d["DateTime"]);
-		const hours = date.getHours();
-		const minutes = date.getMinutes();
-		const seconds = date.getSeconds();
+		const maxSnowDepth = parseNumber(d["Maks. snedybde"]);
 		
-		// Only include data with time `07:00:00`
-		if (hours === 7 && minutes === 0 && seconds === 0) {
+		// Only include data where the data is not null
+		if (maxSnowDepth !== null) {
 		  const dateOnly = new Date(date.setHours(0, 0, 0, 0));
 		  return {
 			date: dateOnly,
@@ -76,13 +73,23 @@ async function loadSnowCSV(year, month) {
 	}
   }
 
+
+var endWinter = ["october", "november", "december"]
 // Load and merge temperature and snow data
 async function loadAllData() {
 	for (const year of years) {
 	  data[year] = {};
-	  for (const month of months) {
-		const tempData = await loadTempCSV(year, month);
-		const snowData = await loadSnowCSV(year, month);
+	  for (const month of snowMonths) {
+
+		var tempData = null;
+		var snowData = null;
+		if(endWinter.includes(month)){
+			tempData = await loadTempCSV(year, month);
+			snowData = await loadSnowCSV(year, month);
+		}else{
+			tempData = await loadTempCSV(year+1, month);
+			snowData = await loadSnowCSV(year+1, month);
+		}
 		
 		if(tempData != null && snowData != null){
 			const combinedData = {};
@@ -99,14 +106,27 @@ async function loadAllData() {
 				};
 			}
 			});
+			console.log("Wof")
+			console.log(month)
+			console.log(snowData.length)
 			
 			// Merge snowfall data into the combined data
 			snowData.forEach(record => {
 			if (record.date) {
+				console.log("yes")
 				const dateKey = record.date.toISOString();
 				if (combinedData[dateKey]) {
 					combinedData[dateKey].maxSnowDepth = record.maxSnowDepth;
+				}else{
+					console.log("WAAOOw")
+					console.log(dateKey)
+					console.log(combinedData)
 				}
+			}
+			else{
+				console.log("WAAOOw2")
+				console.log(record)
+				console.log(combinedData)
 			}
 			});
 			
@@ -118,21 +138,59 @@ async function loadAllData() {
 	  }
 	}
 	console.log(data); // Log the entire data object
+	return data;
   }
 
 // Load the data
-loadAllData();
+loadAllData().then(function(loadedData) {
+    // Now data is fully loaded, and ready for drawing
+    draw(loadedData);
+});
 
 //How to access a year:
 //data[2015]["january"][0].date.getFullYear()
 
-var xScale = d3.scaleLinear()
+//Poistioning on y axis
+var yScale = d3.scaleLinear()
   				.domain([-20,20])
 				.range(margin, h-margin);
-var dayScale = d3.scaleLinear()
-                .domain([0, 31])
-                .range([0, ((w-margin)-margin)/snowMonths.length]);
-var monthScale = d3.scaleLinear()
+
+////////////////////////Poistioning on xScale///////////////////////////////
+
+//Helping function for finding if a year is a leap year.
+function isLeapYear(year){
+
+    return ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)); //Returns a boolean value.
+};
+
+//get number of days in a given month of a given year
+function getDaysInMonth(year, monthIndex){
+    const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    return daysInMonth[monthIndex];
+};
+
+//Here the dayScale is created. 
+//A new one should be created for each month, due to the amount of days changing depending on leap years
+function createDayScale(year, month, width){
+	//Getting the month number:
+	const monthIndex = months.indexOf(month); 
+
+	//Finding the amount of days
+	const numberOfDays = getDaysInMonth(year, monthIndex);
+
+	//Hacky soulotion for creating an array with the amount of days:
+	const days = Array.from({length: numberOfDays}, (_, i) => i + 1); // Array [1, 2, ..., numDays]
+
+	// Create the scale
+    const dayScale = d3.scaleBand()
+        .domain(days) // Days of the month
+        .range([0, width]) // Width in pixels
+
+    return dayScale;
+}
+
+//Here the size of each month is approximately ((w-margin)-margin)/snowMonths.length
+var monthScale = d3.scaleBand()
 					.domain(snowMonths)
 					.range([margin, w-margin]);
 
@@ -140,6 +198,64 @@ var colorScale = d3.scaleOrdinal()
 				.domain(years)
 				.range(d3.schemeCategory10);
 
+function makeSnowTempGraph(g, thisYear, yearData){
+	function drawOneMonth(month, monthData){
+		var scale = createDayScale(thisYear, month, ((w-margin)-margin)/snowMonths.length);
+
+		// Convert the monthData object to an array of values
+        const monthDataArray = Object.values(monthData);
+
+
+		function getRandomInt(min, max) {
+			return Math.floor(Math.random() * (max - min + 1)) + min;
+		}
+		monthDataArray.forEach(element => {
+			g.append("line")
+				.attr("x1", 5*getRandomInt(5,30))
+				.attr("y1", 5*getRandomInt(5,30))
+				.attr("x2", 20*getRandomInt(5,20))
+				.attr("y2", 20*getRandomInt(5,20))
+				.attr("stroke", function(){
+					return colorScale(thisYear)
+				});
+		});
+	}
+
+	snowMonths.forEach(function(d){
+		var temporary = yearData[d];
+		if (temporary !== undefined && temporary !== null) {
+			console.log(`Data for ${d} is available.`);
+			drawOneMonth(d, temporary);
+		} else {
+			console.warn(`Warning: No data available for ${d} in year ${thisYear}.`);
+		}
+	});
+}
+
+
+function draw(Data){
+	Object.entries(Data).forEach(function([year, yearData]) {
+		console.log(year, yearData)
+		console.log("Test")
+		var g = svg.append("g")
+				   .attr("transform", `translate(${0},${0})`);
+		// Add event listeners to the group
+		g.on("mouseover", function() {
+			// Fade out all groups except the hovered one
+			svg.selectAll("g")
+			   .style("opacity", function() {
+				   return (this === g.node()) ? 1 : 0.3; // Keep hovered group fully visible
+			   });
+		})
+		.on("mouseout", function() {
+			// Restore to half opacity to all groups on mouseout
+			svg.selectAll("g")
+			   .style("opacity", 0.5);
+		});
+	
+		makeSnowTempGraph(g, year, yearData)
+	})
+}
 /*
 
 //define a recursive function for making the lines
