@@ -318,5 +318,28 @@ function draw(Data){
 			.attr("stroke", "transparent");
 
 		makeSnowTempGraph(g, year, yearData)
+		
+		// Define your multi-line text
+		var textLines = [
+			"Winter",
+			`${year}-${(parseInt(year, 10)-1999)}`
+		];
+
+		// Append a text element and use tspans to handle multi-line text
+		var textElement = g.append("text")
+			.attr("x", (year - 2010) * (w / years.length))
+			.attr("y", 50)
+			.style("stroke", function(){
+				return colorScale(year)
+			})
+			.style("font-size", "20px");
+
+		// Append each line as a separate tspan
+		textLines.forEach((line, index) => {
+			textElement.append("tspan")
+				.attr("x", (year - 2010) * (w / years.length)) // align with the x of the main text element
+				.attr("dy", index === 0 ? 0 : "1.2em") // Adjust vertical position for subsequent lines
+				.text(line);
+		});
 	})
 }
