@@ -1,55 +1,52 @@
-var w = 1200;
-var h = 500;
-var baseLine = h/2;
-var margin = 20;
+const w = 1200;
+const h = 500;
+const baseLine = h/2;
+const margin = 20;
+const years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]; // List of years
+const months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]; // List of months
+const snowMonths = ["october", "november", "december", "january", "february", "march", "april"]
 
+//Poistioning on y axis
+const yScale = d3.scaleLinear()
+  				.domain([-20.0,20.0])
+				.range([h-margin, margin]);
+//Poistioning on xScale is done later
+
+//Here the size of each month is approximately ((w-margin)-margin)/snowMonths.length
+var monthScale = d3.scaleBand()
+					.domain(snowMonths)
+					.range([margin, w-margin]);
+var colorScale = d3.scaleOrdinal().domain([0, years.length])
+					.range(d3.schemePaired);
 
 var svg = d3.select("#canvas").append("svg")
 			.attr("width",w)
 			.attr("height",h)
 			.style("background-color","black")
 
-
-			
-const years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]; // List of years
-const months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]; // List of months
-const snowMonths = ["october", "november", "december", "january", "february", "march", "april"]
-
 //Here all data will be stored:
 const data = {};
 
-const parseNumber = (str) => {
-	if (str) {
-	  // Replace comma with dot and parse as float
-	  return parseFloat(str.replace(',', '.'));
-	}
-	return null; // Return null if the string is empty or undefined
-  };
+const parseNumber = (str) => str ? parseFloat(str.replace(',', '.')) : null;
+
 // Function to load and parse temperature CSV data
 async function loadTempCSV(year, month) {
 	const filename = `data/${year}_${month}_temp.csv`;
 	try {
-	  // Specify semicolon as the delimiter
-	  const data = await d3.dsv(';',filename, d => {
-		// Function to handle conversion of comma to dot in numbers
-		
-		return {
-		  date: new Date(d["DateTime"]),
-		  laveste: parseNumber(d["Laveste"]),
-		  hojeste: parseNumber(d["Højeste"]),
-		  middel: parseNumber(d["Middel"])
-		};
-	  });
-  
-	  return data;
+		return await d3.dsv(';', filename, d => ({
+		date: new Date(d["DateTime"]),
+		laveste: parseNumber(d["Laveste"]),
+		hojeste: parseNumber(d["Højeste"]),
+		middel: parseNumber(d["Middel"])
+		}));
 	} catch (error) {
-	  console.warn(`Failed to load temperature data for ${year} ${month}:`, error);
-	  return null; // Return null or an empty array if file not found
+		console.warn(`Failed to load temperature data for ${year} ${month}:`, error);
+		return null;
 	}
-  }
+}
   
   
-  // Function to load and parse snow CSV data
+// Function to load and parse snow CSV data
 async function loadSnowCSV(year, month) {
 	const filename = `data/${year}_${month}_snow.csv`;
 	try {
@@ -71,7 +68,7 @@ async function loadSnowCSV(year, month) {
 	  console.warn(`Failed to load snow data for ${year} ${month}:`, error);
 	  return [];
 	}
-  }
+}
 
 
 var endWinter = ["october", "november", "december"]
@@ -81,15 +78,8 @@ async function loadAllData() {
 	  data[year] = {};
 	  for (const month of snowMonths) {
 
-		var tempData = null;
-		var snowData = null;
-		if(endWinter.includes(month)){
-			tempData = await loadTempCSV(year, month);
-			snowData = await loadSnowCSV(year, month);
-		}else{
-			tempData = await loadTempCSV(year+1, month);
-			snowData = await loadSnowCSV(year+1, month);
-		}
+		const tempData = endWinter.includes(month) ? await loadTempCSV(year, month) : await loadTempCSV(year + 1, month);
+		const snowData = endWinter.includes(month) ? await loadSnowCSV(year, month) : await loadSnowCSV(year + 1, month);
 		
 		if(tempData != null && snowData != null){
 			const combinedData = {};
@@ -112,22 +102,12 @@ async function loadAllData() {
 			
 			// Merge snowfall data into the combined data
 			snowData.forEach(record => {
-			if (record.date) {
-				console.log("yes")
-				const dateKey = record.date.toISOString();
-				if (combinedData[dateKey]) {
-					combinedData[dateKey].maxSnowDepth = record.maxSnowDepth;
-				}else{
-					console.log("WAAOOw")
-					console.log(dateKey)
-					console.log(combinedData)
+				if (record.date) {
+					const dateKey = record.date.toISOString();
+					if (combinedData[dateKey]) {
+						combinedData[dateKey].maxSnowDepth = record.maxSnowDepth;
+					}
 				}
-			}
-			else{
-				console.log("WAAOOw2")
-				console.log(record)
-				console.log(combinedData)
-			}
 			});
 			
 			// Convert combinedData object to an array
@@ -139,36 +119,47 @@ async function loadAllData() {
 	}
 	console.log(data); // Log the entire data object
 	return data;
-  }
+}
 
-// Load the data
-loadAllData().then(function(loadedData) {
-    // Now data is fully loaded, and ready for drawing
-    draw(loadedData);
-});
+function drawYAxis() {
+	// Creating a new group for the y-axis
+	const yAxisGroup = svg.append("g")
+						.attr("class", "y-axis")
+						.attr("transform", `translate(${margin*2}, 0)`);
+  
+	const yAxis = d3.axisLeft(yScale)
+					.ticks(10)
+					.tickSize(-w + 2 * margin); // Extend ticks across the width of the chart
+  
+	// Append the y-axis to the yAxisGroup
+	yAxisGroup.call(yAxis);
+  
+	yAxisGroup.select(".domain")
+    .attr("stroke", "white") // Color of the axis line
+    .attr("stroke-width", 1); // stroke (line) for the axis domain removed, due to me not knowing if it looks good
+  
+	yAxisGroup.selectAll(".tick text")
+	  .attr("fill", "white") 
+	  .style("font-family", "Arial, sans-serif")
+	  .style("font-size", "12px");
+  
+	// label for the y-axis
+	yAxisGroup.append("text")
+	  .attr("class", "y-axis-label")
+	  .attr("transform", "rotate(-90)")
+	  .attr("y", -margin*1.75 + 10)
+	  .attr("x", -h / 2)
+	  .style("text-anchor", "middle")
+	  .style("fill", "white")
+	  .style("font-family", "Arial, sans-serif")
+	  .style("font-size", "14px")
+	  .text("Temperature / Snow Depth");
+}
 
-//How to access a year:
-//data[2015]["january"][0].date.getFullYear()
 
-//Poistioning on y axis
-var yScale = d3.scaleLinear()
-  				.domain([-20.0,20.0])
-				.range([h-margin, margin]);
-
-//Poistioning on xScale is done later
-
-
-//Here the size of each month is approximately ((w-margin)-margin)/snowMonths.length
-var monthScale = d3.scaleBand()
-					.domain(snowMonths)
-					.range([margin, w-margin]);
-
-//var colorScale = d3.scaleSequential(d3.interpolateRainbow).domain([0, years.length]);
-var colorScale = d3.scaleOrdinal().domain([0, years.length])
-					.range(d3.schemePaired);
-
+//Drawing the graph
 function makeSnowTempGraph(g, thisYear, yearData){
-	function drawOneMonth(month, monthData, nextTempPos, nextSnowPos){
+	function drawOneMonth(month, monthData, nextPos){
 
 		// Convert the monthData object to an array of values
         const monthDataArray = Object.values(monthData);
@@ -183,7 +174,7 @@ function makeSnowTempGraph(g, thisYear, yearData){
 			
 			//Check if end of month, and the line should connect
 			if(index === (array.length - 1)){
-				nextElement = nextTempPos;
+				nextElement = nextPos;
 			}
 
 			if(nextElement !== null){
@@ -203,7 +194,8 @@ function makeSnowTempGraph(g, thisYear, yearData){
 						return yScale(nextElement.laveste);
 					})
 					.attr("stroke", "transparent")
-					.attr("stroke-width", 8);
+					.attr("stroke-width", 8)
+					.attr("class", `temp-line-${thisYear}`);
 				
 				//The line showing the lower temperature.
 				g.append("line")
@@ -222,7 +214,8 @@ function makeSnowTempGraph(g, thisYear, yearData){
 					.attr("stroke", function(){
 						return colorScale(thisYear)
 					})
-					.style("opacity", 0.7);
+					.style("opacity", 0.7)
+					.attr("class", `temp-line-${thisYear}`);
 
 
 				console.log("YEES")
@@ -242,7 +235,8 @@ function makeSnowTempGraph(g, thisYear, yearData){
 						return yScale(nextElement.maxSnowDepth);
 					})
 					.attr("stroke", "transparent")
-					.attr("stroke-width", 8);
+					.attr("stroke-width", 8)
+					.attr("class", `snow-line-${thisYear}`);
 
 				//Dotted Snow line
 				g.append("line")
@@ -262,18 +256,19 @@ function makeSnowTempGraph(g, thisYear, yearData){
 						return colorScale(thisYear)
 					})
 					.attr("stroke-dasharray", "4")
-					.style("opacity", 0.7);
+					.style("opacity", 0.7)
+					.attr("class", `snow-line-${thisYear}`);
 			}
 		});
 	}
 
 	//Here snowMonths is used for inputting the months into yearData.
 	snowMonths.forEach(function(d, i, arr){
-		var temporary = yearData[d];
+		const temporary = yearData[d];
 		if (temporary !== undefined && temporary !== null) {
 
 			//check if there exist month after this.
-			var nextStartPoint = yearData[arr[i+1]]
+			const nextStartPoint = yearData[arr[i+1]]
 			if(nextStartPoint !== undefined && nextStartPoint !== null){
 				const nextMonthDataArray = Object.values(nextStartPoint);
 				drawOneMonth(d, temporary, nextMonthDataArray[0]);
@@ -288,8 +283,10 @@ function makeSnowTempGraph(g, thisYear, yearData){
 
 function draw(Data) {
     const graphGroups = {}; // Object to keep track of graph groups for each year
-    const textElements = {};
+    const textElements = {}; // Object to keep track of the text
     const visibleGraphs = new Set(); // Set to keep track of visible graphs
+
+	drawYAxis();
 
     Object.entries(Data).forEach(function ([year, yearData]) {
         console.log(year, yearData);
@@ -298,7 +295,7 @@ function draw(Data) {
         // Create a group for each year's graph
         var g = svg.append("g")
             .attr("transform", `translate(${0},${0})`)
-            .attr("class", `graph-group-${year}`); // Add a class for identifying the group
+            .attr("class", `graph-group graph-group-${year}`); // Add a common class for all graph groups
 
         // Initialize graph visibility to hidden
         graphGroups[year] = g;
@@ -307,14 +304,14 @@ function draw(Data) {
         // Add event listeners to the group
         g.on("mouseover", function () {
             // Fade out all groups except the hovered one
-            svg.selectAll("g")
+            svg.selectAll(".graph-group")
                 .style("opacity", function () {
                     return (this === g.node()) ? 1 : 0.2; // Keep hovered group fully visible
                 });
         })
         .on("mouseout", function () {
             // Restore full opacity to all groups on mouseout
-            svg.selectAll("g")
+            svg.selectAll(".graph-group")
                 .style("opacity", 1);
         });
 
@@ -337,13 +334,13 @@ function draw(Data) {
             `${year}-${(parseInt(year, 10) - 1999)}`
         ];
 
-        // Append a text element and use tspans to handle multi-line text
-        var textElement = svg.append("text")
+        // Text for each year, 
+        const textElement = svg.append("text")
             .attr("x", (year - 2010) * (w / years.length))
             .attr("y", 30)
             .attr("class", "text-element") // Add a class for identifying the text element
             .style("fill", function () {
-                return colorScale(year); // Use fill to set the text color
+                return colorScale(year);
             })
             .style("text-anchor", "middle")
             .style("font-size", "20px")
@@ -354,7 +351,7 @@ function draw(Data) {
         textLines.forEach((line, index) => {
             textElement.append("tspan")
                 .attr("x", margin * 2 + (year - 2010) * (w / years.length)) // align with the x of the main text element
-                .attr("dy", index === 0 ? 0 : "1.2em") // Adjust vertical position for subsequent lines
+                .attr("dy", index === 0 ? 0 : "1.2em") // Here the distance between lines are adjusted
                 .text(line)
                 .style("font-family", "Arial, sans-serif")
                 .style("text-anchor", "middle");
@@ -386,8 +383,8 @@ function draw(Data) {
             });
 
             // Hide all graphs that are not in the visibleGraphs set
-            svg.selectAll("g").each(function () {
-                const currentYear = d3.select(this).attr("class").split("-").pop();
+            svg.selectAll(".graph-group").each(function () {
+                const currentYear = d3.select(this).attr("class").split("-").pop(); //Hacky soloution to get the year from the class name, defined upon its initiation
                 if (!visibleGraphs.has(currentYear)) {
                     d3.select(this).style("display", "none");
                 }
@@ -395,9 +392,8 @@ function draw(Data) {
 
             // Show every graph if visibleGraphs are empty, aka nothing to highlight
             if (visibleGraphs.size === 0) {
-                svg.selectAll("g").each(function () {
-                    d3.select(this).style("display", "block");
-                });
+				//show all graphs
+                svg.selectAll(".graph-group").style("display", "block");
 
                 // Show all text
                 Object.entries(textElements).forEach(([textYear, textElem]) => {
@@ -407,3 +403,9 @@ function draw(Data) {
         });
     });
 }
+
+// Load the data
+loadAllData().then(function(loadedData) {
+    // Now data is fully loaded, and ready for drawing, by the draw function
+    draw(loadedData);
+});
