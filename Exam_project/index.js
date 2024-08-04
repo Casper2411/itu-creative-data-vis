@@ -155,7 +155,6 @@ var yScale = d3.scaleLinear()
   				.domain([-20.0,20.0])
 				.range([h-margin, margin]);
 
-
 //Poistioning on xScale is done later
 
 
@@ -289,7 +288,7 @@ function makeSnowTempGraph(g, thisYear, yearData){
 
 function draw(Data) {
     const graphGroups = {}; // Object to keep track of graph groups for each year
-	const textElements = {};
+    const textElements = {};
     const visibleGraphs = new Set(); // Set to keep track of visible graphs
 
     Object.entries(Data).forEach(function ([year, yearData]) {
@@ -313,11 +312,11 @@ function draw(Data) {
                     return (this === g.node()) ? 1 : 0.2; // Keep hovered group fully visible
                 });
         })
-            .on("mouseout", function () {
-                // Restore to half opacity to all groups on mouseout
-                svg.selectAll("g")
-                    .style("opacity", 1);
-            });
+        .on("mouseout", function () {
+            // Restore full opacity to all groups on mouseout
+            svg.selectAll("g")
+                .style("opacity", 1);
+        });
 
         svg.append("line")
             .attr("x1", margin)
@@ -342,26 +341,26 @@ function draw(Data) {
         var textElement = svg.append("text")
             .attr("x", (year - 2010) * (w / years.length))
             .attr("y", 30)
+            .attr("class", "text-element") // Add a class for identifying the text element
             .style("fill", function () {
-				return colorScale(year); // Use fill to set the text color
-			})
-			.style("text-anchor", "middle")
+                return colorScale(year); // Use fill to set the text color
+            })
+            .style("text-anchor", "middle")
             .style("font-size", "20px")
-			.style("font-family", "Arial, sans-serif")
+            .style("font-family", "Arial, sans-serif")
             .style("cursor", "pointer"); // Change mouse to look "clickable"
-			
 
         // Append each line as a separate tspan
         textLines.forEach((line, index) => {
             textElement.append("tspan")
-                .attr("x", margin*2+(year - 2010) * (w / years.length)) // align with the x of the main text element
+                .attr("x", margin * 2 + (year - 2010) * (w / years.length)) // align with the x of the main text element
                 .attr("dy", index === 0 ? 0 : "1.2em") // Adjust vertical position for subsequent lines
                 .text(line)
-				.style("font-family", "Arial, sans-serif")
-				.style("text-anchor", "middle"); 
+                .style("font-family", "Arial, sans-serif")
+                .style("text-anchor", "middle");
         });
 
-		// Store the text element for this year
+        // Store the text element for this year
         textElements[year] = textElement;
 
         // Add click handler to the text element
@@ -376,8 +375,8 @@ function draw(Data) {
                 visibleGraphs.add(year);
                 graphGroups[year].style("display", "block");
             }
-		
-			// Update text element visibility based on the visibleGraphs set
+
+            // Update text element visibility based on the visibleGraphs set
             Object.entries(textElements).forEach(([textYear, textElem]) => {
                 if (!visibleGraphs.has(textYear)) {
                     textElem.style("opacity", 0.3); // Hide text if its year is not in visibleGraphs
@@ -385,7 +384,6 @@ function draw(Data) {
                     textElem.style("opacity", 1); // Show text if its year is in visibleGraphs
                 }
             });
-			
 
             // Hide all graphs that are not in the visibleGraphs set
             svg.selectAll("g").each(function () {
@@ -395,17 +393,17 @@ function draw(Data) {
                 }
             });
 
-			//Show every graph if visibleGraphs are empty, aka nothing to highlight
-			if(visibleGraphs.size === 0){
-				svg.selectAll("g").each(function () {
-					d3.select(this).style("display", "block");
-				});
+            // Show every graph if visibleGraphs are empty, aka nothing to highlight
+            if (visibleGraphs.size === 0) {
+                svg.selectAll("g").each(function () {
+                    d3.select(this).style("display", "block");
+                });
 
-				//Show all text
-				Object.entries(textElements).forEach(([textYear, textElem]) => {
-					textElem.style("opacity", 1);
-				});
-			}
+                // Show all text
+                Object.entries(textElements).forEach(([textYear, textElem]) => {
+                    textElem.style("opacity", 1);
+                });
+            }
         });
     });
 }
