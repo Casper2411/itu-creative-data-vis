@@ -11,7 +11,7 @@ var svg = d3.select("#canvas").append("svg")
 
 
 			
-const years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]; // List of years
+const years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]; // List of years
 const months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]; // List of months
 const snowMonths = ["october", "november", "december", "january", "february", "march", "april"]
 
@@ -164,9 +164,9 @@ var monthScale = d3.scaleBand()
 					.domain(snowMonths)
 					.range([margin, w-margin]);
 
-var colorScale = d3.scaleOrdinal()
-				.domain(years)
-				.range(d3.schemeCategory10);
+//var colorScale = d3.scaleSequential(d3.interpolateRainbow).domain([0, years.length]);
+var colorScale = d3.scaleOrdinal().domain([0, years.length])
+					.range(d3.schemePaired);
 
 function makeSnowTempGraph(g, thisYear, yearData){
 	function drawOneMonth(month, monthData, nextTempPos, nextSnowPos){
@@ -287,59 +287,125 @@ function makeSnowTempGraph(g, thisYear, yearData){
 }
 
 
-function draw(Data){
-	Object.entries(Data).forEach(function([year, yearData]) {
-		console.log(year, yearData)
-		console.log("Test")
-		var g = svg.append("g")
-				   .attr("transform", `translate(${0},${0})`);
-		// Add event listeners to the group
-		g.on("mouseover", function() {
-			// Fade out all groups except the hovered one
-			svg.selectAll("g")
-			   .style("opacity", function() {
-				   return (this === g.node()) ? 1 : 0.2; // Keep hovered group fully visible
-			   });
-		})
-		.on("mouseout", function() {
-			// Restore to half opacity to all groups on mouseout
-			svg.selectAll("g")
-			   .style("opacity", 0.7);
-		});
-		svg.append("line")
-			.attr("x1", margin)
-			.attr("y1", function(){
-				return yScale(0);
-			})
-			.attr("x2", w-margin)
-			.attr("y2", function(){
-				return yScale(0);
-			})
-			.attr("stroke", "transparent");
+function draw(Data) {
+    const graphGroups = {}; // Object to keep track of graph groups for each year
+	const textElements = {};
+    const visibleGraphs = new Set(); // Set to keep track of visible graphs
 
-		makeSnowTempGraph(g, year, yearData)
+    Object.entries(Data).forEach(function ([year, yearData]) {
+        console.log(year, yearData);
+        console.log("Test");
+
+        // Create a group for each year's graph
+        var g = svg.append("g")
+            .attr("transform", `translate(${0},${0})`)
+            .attr("class", `graph-group-${year}`); // Add a class for identifying the group
+
+        // Initialize graph visibility to hidden
+        graphGroups[year] = g;
+        g.style("display", "block");
+
+        // Add event listeners to the group
+        g.on("mouseover", function () {
+            // Fade out all groups except the hovered one
+            svg.selectAll("g")
+                .style("opacity", function () {
+                    return (this === g.node()) ? 1 : 0.2; // Keep hovered group fully visible
+                });
+        })
+            .on("mouseout", function () {
+                // Restore to half opacity to all groups on mouseout
+                svg.selectAll("g")
+                    .style("opacity", 1);
+            });
+
+        svg.append("line")
+            .attr("x1", margin)
+            .attr("y1", function () {
+                return yScale(0);
+            })
+            .attr("x2", w - margin)
+            .attr("y2", function () {
+                return yScale(0);
+            })
+            .attr("stroke", "transparent");
+
+        makeSnowTempGraph(g, year, yearData);
+
+        // Define your multi-line text
+        var textLines = [
+            "Winter",
+            `${year}-${(parseInt(year, 10) - 1999)}`
+        ];
+
+        // Append a text element and use tspans to handle multi-line text
+        var textElement = svg.append("text")
+            .attr("x", (year - 2010) * (w / years.length))
+            .attr("y", 30)
+            .style("fill", function () {
+				return colorScale(year); // Use fill to set the text color
+			})
+			.style("text-anchor", "middle")
+            .style("font-size", "20px")
+			.style("font-family", "Arial, sans-serif")
+            .style("cursor", "pointer"); // Change mouse to look "clickable"
+			
+
+        // Append each line as a separate tspan
+        textLines.forEach((line, index) => {
+            textElement.append("tspan")
+                .attr("x", margin*2+(year - 2010) * (w / years.length)) // align with the x of the main text element
+                .attr("dy", index === 0 ? 0 : "1.2em") // Adjust vertical position for subsequent lines
+                .text(line)
+				.style("font-family", "Arial, sans-serif")
+				.style("text-anchor", "middle"); 
+        });
+
+		// Store the text element for this year
+        textElements[year] = textElement;
+
+        // Add click handler to the text element
+        textElement.on("click", function () {
+            // Toggle visibility of the clicked graph and update visibleGraphs set
+            if (visibleGraphs.has(year)) {
+                // If the year is already visible, remove it from the set and hide the graph
+                visibleGraphs.delete(year);
+                graphGroups[year].style("display", "none");
+            } else {
+                // If the year is not visible, add it to the set and show the graph
+                visibleGraphs.add(year);
+                graphGroups[year].style("display", "block");
+            }
 		
-		// Define your multi-line text
-		var textLines = [
-			"Winter",
-			`${year}-${(parseInt(year, 10)-1999)}`
-		];
+			// Update text element visibility based on the visibleGraphs set
+            Object.entries(textElements).forEach(([textYear, textElem]) => {
+                if (!visibleGraphs.has(textYear)) {
+                    textElem.style("opacity", 0.3); // Hide text if its year is not in visibleGraphs
+                } else {
+                    textElem.style("opacity", 1); // Show text if its year is in visibleGraphs
+                }
+            });
+			
 
-		// Append a text element and use tspans to handle multi-line text
-		var textElement = g.append("text")
-			.attr("x", (year - 2010) * (w / years.length))
-			.attr("y", 50)
-			.style("stroke", function(){
-				return colorScale(year)
-			})
-			.style("font-size", "20px");
+            // Hide all graphs that are not in the visibleGraphs set
+            svg.selectAll("g").each(function () {
+                const currentYear = d3.select(this).attr("class").split("-").pop();
+                if (!visibleGraphs.has(currentYear)) {
+                    d3.select(this).style("display", "none");
+                }
+            });
 
-		// Append each line as a separate tspan
-		textLines.forEach((line, index) => {
-			textElement.append("tspan")
-				.attr("x", (year - 2010) * (w / years.length)) // align with the x of the main text element
-				.attr("dy", index === 0 ? 0 : "1.2em") // Adjust vertical position for subsequent lines
-				.text(line);
-		});
-	})
+			//Show every graph if visibleGraphs are empty, aka nothing to highlight
+			if(visibleGraphs.size === 0){
+				svg.selectAll("g").each(function () {
+					d3.select(this).style("display", "block");
+				});
+
+				//Show all text
+				Object.entries(textElements).forEach(([textYear, textElem]) => {
+					textElem.style("opacity", 1);
+				});
+			}
+        });
+    });
 }
