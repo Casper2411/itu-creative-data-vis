@@ -96,9 +96,6 @@ async function loadAllData() {
 				};
 			}
 			});
-			console.log("Wof")
-			console.log(month)
-			console.log(snowData.length)
 			
 			// Merge snowfall data into the combined data
 			snowData.forEach(record => {
@@ -153,9 +150,42 @@ function drawYAxis() {
 	  .style("fill", "white")
 	  .style("font-family", "Arial, sans-serif")
 	  .style("font-size", "14px")
-	  .text("Temperature / Snow Depth");
+	  .text("Temperature(C°) / Snow Depth(cm)");
 }
 
+function drawXAxis() {
+    // Creating a new group for the x-axis
+    const xAxisGroup = svg.append("g")
+        .attr("class", "x-axis")
+        .attr("transform", `translate(${margin}, ${h - margin*2.25})`); // Position x-axis at the bottom
+  
+    const xAxis = d3.axisBottom(monthScale)
+        .tickSize(0) // Hide the tick lines
+        .tickPadding(10); // Space between ticks and labels
+  
+    // Append the x-axis to the xAxisGroup
+    xAxisGroup.call(xAxis);
+  
+    xAxisGroup.select(".domain")
+        .attr("stroke", "white") // Color of the axis line
+        .attr("stroke-width", 1); // Width of the axis line
+  
+    xAxisGroup.selectAll(".tick text")
+        .attr("fill", "white") 
+        .style("font-family", "Arial, sans-serif")
+        .style("font-size", "12px");
+  
+    // Optional: Add a label for the x-axis
+    xAxisGroup.append("text")
+        .attr("class", "x-axis-label")
+        .attr("x", w / 2)
+        .attr("y", margin*2)
+        .style("text-anchor", "middle")
+        .style("fill", "white")
+        .style("font-family", "Arial, sans-serif")
+        .style("font-size", "14px")
+        .text("Month");
+}
 
 //Drawing the graph
 function makeSnowTempGraph(g, thisYear, yearData){
@@ -217,9 +247,6 @@ function makeSnowTempGraph(g, thisYear, yearData){
 					.style("opacity", 0.7)
 					.attr("class", `temp-line-${thisYear}`);
 
-
-				console.log("YEES")
-				console.log(element)
 				//Transparent line in background for Snow
 				g.append("line")
 					.attr("x1", function(){
@@ -287,11 +314,9 @@ function draw(Data) {
     const visibleGraphs = new Set(); // Set to keep track of visible graphs
 
 	drawYAxis();
+	drawXAxis();
 
     Object.entries(Data).forEach(function ([year, yearData]) {
-        console.log(year, yearData);
-        console.log("Test");
-
         // Create a group for each year's graph
         var g = svg.append("g")
             .attr("transform", `translate(${0},${0})`)
@@ -314,17 +339,6 @@ function draw(Data) {
             svg.selectAll(".graph-group")
                 .style("opacity", 1);
         });
-
-        svg.append("line")
-            .attr("x1", margin)
-            .attr("y1", function () {
-                return yScale(0);
-            })
-            .attr("x2", w - margin)
-            .attr("y2", function () {
-                return yScale(0);
-            })
-            .attr("stroke", "transparent");
 
         makeSnowTempGraph(g, year, yearData);
 
@@ -351,7 +365,7 @@ function draw(Data) {
         textLines.forEach((line, index) => {
             textElement.append("tspan")
                 .attr("x", margin * 2 + (year - 2010) * (w / years.length)) // align with the x of the main text element
-                .attr("dy", index === 0 ? 0 : "1.2em") // Here the distance between lines are adjusted
+                .attr("dy", index === 0 ? 0 : "1.1em") // Here the distance between lines are adjusted
                 .text(line)
                 .style("font-family", "Arial, sans-serif")
                 .style("text-anchor", "middle");
@@ -373,22 +387,7 @@ function draw(Data) {
                 graphGroups[year].style("display", "block");
             }
 
-            // Update text element visibility based on the visibleGraphs set
-            Object.entries(textElements).forEach(([textYear, textElem]) => {
-                if (!visibleGraphs.has(textYear)) {
-                    textElem.style("opacity", 0.3); // Hide text if its year is not in visibleGraphs
-                } else {
-                    textElem.style("opacity", 1); // Show text if its year is in visibleGraphs
-                }
-            });
-
-            // Hide all graphs that are not in the visibleGraphs set
-            svg.selectAll(".graph-group").each(function () {
-                const currentYear = d3.select(this).attr("class").split("-").pop(); //Hacky soloution to get the year from the class name, defined upon its initiation
-                if (!visibleGraphs.has(currentYear)) {
-                    d3.select(this).style("display", "none");
-                }
-            });
+            updateGraphics();
 
             // Show every graph if visibleGraphs are empty, aka nothing to highlight
             if (visibleGraphs.size === 0) {
@@ -399,9 +398,68 @@ function draw(Data) {
                 Object.entries(textElements).forEach(([textYear, textElem]) => {
                     textElem.style("opacity", 1);
                 });
+
             }
         });
     });
+	function updateGraphics(){
+		Object.entries(textElements).forEach(([textYear, textElem]) => {
+			if (!visibleGraphs.has(textYear)) {
+				textElem.style("opacity", 0.3); // Hide text if its year is not in visibleGraphs
+			} else {
+				textElem.style("opacity", 1); // Show text if its year is in visibleGraphs
+			}
+		});
+
+		svg.selectAll(".graph-group").each(function () {
+			const currentYear = d3.select(this).attr("class").split("-").pop(); //Hacky soloution to get the year from the class name, defined upon its initiation
+			if (!visibleGraphs.has(currentYear)) {
+				d3.select(this).style("display", "none");
+			}else{
+				d3.select(this).style("display", "block");
+			}
+		});
+	}
+	svg.append("text")
+				.text("Years with most and least amount of snow")
+				.attr("x", w-275)
+				.attr("y", h-50)
+				.style("fill", "CornflowerBlue")
+				.style("text-decoration", "underline")
+				.style("cursor", "pointer") // Change cursor to pointer
+				.on("click", function () {
+					visibleGraphs.clear();
+					visibleGraphs.add("2012");//Least amount of snow.
+					visibleGraphs.add("2019");//Most amount of snow.
+
+					updateGraphics();
+				});
+	svg.append("text")
+				.text("Most amount of snow measured on a day")
+				.attr("x", w-275)
+				.attr("y", h-70)
+				.style("fill", "CornflowerBlue")
+				.style("text-decoration", "underline")
+				.style("cursor", "pointer") // Change cursor to pointer
+				.on("click", function () {
+					visibleGraphs.clear();
+					visibleGraphs.add("2015");
+
+					updateGraphics();
+				});
+	svg.append("text")
+				.text("Lowest temperature measured on a day")
+				.attr("x", w-275)
+				.attr("y", h-90)
+				.style("fill", "CornflowerBlue")
+				.style("text-decoration", "underline")
+				.style("cursor", "pointer") // Change cursor to pointer
+				.on("click", function () {
+					visibleGraphs.clear();
+					visibleGraphs.add("2011");
+
+					updateGraphics();
+				});
 }
 
 // Load the data
