@@ -126,7 +126,7 @@ function drawYAxis() {
   
 	const yAxis = d3.axisLeft(yScale)
 					.ticks(10)
-					.tickSize(-w + 2 * margin); // Extend ticks across the width of the chart
+					.tickSize(0); // Extend ticks across the width of the chart
   
 	// Append the y-axis to the yAxisGroup
 	yAxisGroup.call(yAxis);
@@ -162,6 +162,7 @@ function drawXAxis() {
     const xAxis = d3.axisBottom(monthScale)
         .tickSize(0) // Hide the tick lines
         .tickPadding(10); // Space between ticks and labels
+
   
     // Append the x-axis to the xAxisGroup
     xAxisGroup.call(xAxis);
@@ -351,7 +352,7 @@ function draw(Data) {
         // Text for each year, 
         const textElement = svg.append("text")
             .attr("x", (year - 2010) * (w / years.length))
-            .attr("y", 30)
+            .attr("y", 40)
             .attr("class", "text-element") // Add a class for identifying the text element
             .style("fill", function () {
                 return colorScale(year);
@@ -422,8 +423,8 @@ function draw(Data) {
 	}
 	svg.append("text")
 				.text("Years with most and least amount of snow")
-				.attr("x", w-275)
-				.attr("y", h-50)
+				.attr("x", w-300)
+				.attr("y", h-64)
 				.style("fill", "CornflowerBlue")
 				.style("text-decoration", "underline")
 				.style("cursor", "pointer") // Change cursor to pointer
@@ -436,8 +437,8 @@ function draw(Data) {
 				});
 	svg.append("text")
 				.text("Most amount of snow measured on a day")
-				.attr("x", w-275)
-				.attr("y", h-70)
+				.attr("x", w-300)
+				.attr("y", h-84)
 				.style("fill", "CornflowerBlue")
 				.style("text-decoration", "underline")
 				.style("cursor", "pointer") // Change cursor to pointer
@@ -449,8 +450,8 @@ function draw(Data) {
 				});
 	svg.append("text")
 				.text("Lowest temperature measured on a day")
-				.attr("x", w-275)
-				.attr("y", h-90)
+				.attr("x", w-300)
+				.attr("y", h-104)
 				.style("fill", "CornflowerBlue")
 				.style("text-decoration", "underline")
 				.style("cursor", "pointer") // Change cursor to pointer
