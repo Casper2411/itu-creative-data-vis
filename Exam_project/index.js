@@ -447,6 +447,16 @@ function draw(Data) {
 					visibleGraphs.add("2015");
 
 					updateGraphics();
+					svg.append("line")
+						.attr("x1", w-300)
+						.attr("y1", h-88)
+						.attr("x2", 325)
+						.attr("y2", 93)
+						.attr("stroke", "white")
+						.transition()
+						.duration(5000) // Duration for the fade-out
+						.style("opacity", 0) // Fade out
+						.remove(); // Remove after fading out
 				});
 	svg.append("text")
 				.text("Lowest temperature measured on a day")
@@ -460,6 +470,16 @@ function draw(Data) {
 					visibleGraphs.add("2011");
 
 					updateGraphics();
+					svg.append("line")
+						.attr("x1", w-300)
+						.attr("y1", h-108)
+						.attr("x2", 730)
+						.attr("y2", h-103)
+						.attr("stroke", "white")
+						.transition()
+						.duration(5000) // Duration for the fade-out
+						.style("opacity", 0) // Fade out
+						.remove(); // Remove after fading out
 				});
 }
 
